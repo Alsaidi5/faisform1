@@ -1,0 +1,137 @@
+<!DOCTYPE html>
+<html dir="rtl">
+<head>
+    <meta charset="UTF-8">
+    <title>إدخال ومعاينة التقارير - النسخة الكاملة</title>
+    <style>
+        @font-face {
+            font-family: 'XB Niloofar';
+            src: url('https://cdn.jsdelivr.net/gh/Alsaidi5/faisform/XB-NiloofarBd.woff') format('woff');
+            font-weight: bold;
+        }
+        body { font-family: 'XB Niloofar', sans-serif; background: #eef2f3; padding: 20px; display: flex; flex-direction: column; align-items: center; }
+        
+        /* تنسيق نموذج الإدخال */
+        .input-section { 
+            width: 100%; max-width: 800px; background: white; padding: 25px; 
+            border-radius: 12px; box-shadow: 0 4px 15px rgba(0,0,0,0.1); margin-bottom: 30px; 
+        }
+        .grid-input { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+        input, textarea { padding: 10px; border: 1px solid #ddd; border-radius: 6px; font-size: 14px; width: 100%; box-sizing: border-box; }
+        .full { grid-column: span 2; }
+        button { 
+            margin-top: 15px; padding: 15px; background: #00796b; color: white; 
+            border: none; border-radius: 8px; font-weight: bold; cursor: pointer; width: 100%;
+        }
+
+        /* --- قسم المعاينة الحية --- */
+        .preview-container {
+            width: 297mm; height: 210mm;
+            position: relative;
+            background-image: url('https://raw.githubusercontent.com/Alsaidi5/faisform/main/template.jpg');
+            background-size: 100% 100%; background-color: white;
+            box-shadow: 0 0 20px rgba(0,0,0,0.2);
+            transform: scale(0.45); /* مقاس مناسب لشاشة الماك */
+            transform-origin: top center;
+            margin-bottom: -110mm;
+        }
+
+        .abs { position: absolute; color: #333; font-weight: bold; pointer-events: none; }
+        .v-serial { top: 26mm; left: 258mm; font-size: 25pt; color: #fff; width: 20mm; text-align: center; }
+        .v-newspaper { top: 50mm; left: 182mm; font-size: 13pt; width: 100mm; text-align: center; color: #fff; }
+        .v-date { top: 85mm; left: 194mm; font-size: 14pt; width: 30mm; text-align: center; }
+        .v-keywords { top: 123mm; left: 188mm; font-size: 12pt; width: 40mm; text-align: center; line-height: 1.4; }
+        .v-text { top: 25mm; right: 197mm; width: 75mm; height: 132mm; font-size: 13pt; line-height: 1.4; text-align: justify; overflow: hidden; white-space: pre-wrap; }
+        .v-img-box { position: absolute; top: 25mm; left: 107mm; width: 75mm; height: 130mm; display: flex; align-items: center; justify-content: center; overflow: hidden; }
+        .v-img { max-width: 100%; max-height: 100%; object-fit: cover; }
+
+        /* أيقونة الرابط في المعاينة */
+        .v-link-icon {
+            position: absolute; top: 168mm; left: 188mm; width: 35mm; height: 12mm;
+            display: none; /* تظهر فقط عند وجود رابط */
+            background-image: url('data:image/svg+xml;utf8,<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 24 24" fill="%2300796b"><path d="M10 6L8.59 7.41 13.17 12l-4.58 4.59L10 18l6-6z"/></svg>');
+            background-repeat: no-repeat; background-position: center;
+        }
+    </style>
+</head>
+<body>
+
+<div class="input-section">
+    <h2>أرشفة خبر ومعاينة مباشرة (النسخة الكاملة) 📝</h2>
+    <div class="grid-input">
+        <input type="text" id="serialNum" placeholder="الرقم التسلسلي (01)" oninput="updatePreview()">
+        <input type="text" id="newspaper" placeholder="اسم الصحيفة" oninput="updatePreview()">
+        <input type="text" id="dateText" placeholder="التاريخ" oninput="updatePreview()">
+        <input type="text" id="keywords" placeholder="الكلمات المفتاحية" oninput="updatePreview()">
+        <textarea id="fullText" class="full" rows="4" placeholder="نص الخبر الكامل" oninput="updatePreview()"></textarea>
+        <input type="url" id="newsLink" class="full" placeholder="رابط الخبر (https://...)" oninput="updatePreview()">
+        <div class="full">
+            <label style="font-weight: bold;">صورة الخبر:</label>
+            <input type="file" id="imageInput" accept="image/*" onchange="previewImage(this)">
+        </div>
+    </div>
+    <button onclick="saveToFile()">حفظ الخبر (Download JSON) 💾</button>
+</div>
+
+<div class="preview-container" id="capture">
+    <div class="abs v-serial" id="pre-serial">00</div>
+    <div class="abs v-newspaper" id="pre-newspaper">اسم الصحيفة</div>
+    <div class="abs v-date" id="pre-date">التاريخ</div>
+    <div class="abs v-keywords" id="pre-keywords"></div>
+    <div class="abs v-text" id="pre-text">نص الخبر...</div>
+    <div class="v-img-box"><img src="" id="pre-img" class="v-img"></div>
+    <div class="v-link-icon" id="pre-link-icon"></div>
+</div>
+
+<script>
+    function updatePreview() {
+        document.getElementById('pre-serial').innerText = document.getElementById('serialNum').value || '00';
+        document.getElementById('pre-newspaper').innerText = document.getElementById('newspaper').value || 'اسم الصحيفة';
+        document.getElementById('pre-date').innerText = document.getElementById('dateText').value || 'التاريخ';
+        document.getElementById('pre-keywords').innerText = document.getElementById('keywords').value || '';
+        document.getElementById('pre-text').innerText = document.getElementById('fullText').value || 'نص الخبر...';
+        
+        // إظهار سهم الرابط في المعاينة إذا وجد نص في خانة الرابط
+        const linkVal = document.getElementById('newsLink').value;
+        document.getElementById('pre-link-icon').style.display = linkVal ? 'block' : 'none';
+        
+        autoShrink(document.getElementById('pre-text'));
+    }
+
+    function previewImage(input) {
+        if (input.files && input.files[0]) {
+            const reader = new FileReader();
+            reader.onload = (e) => { document.getElementById('pre-img').src = e.target.result; };
+            reader.readAsDataURL(input.files[0]);
+        }
+    }
+
+    function saveToFile() {
+        const entry = {
+            serial: document.getElementById("serialNum").value,
+            newspaper: document.getElementById("newspaper").value,
+            date: document.getElementById("dateText").value,
+            keywords: document.getElementById("keywords").value,
+            text: document.getElementById("fullText").value,
+            link: document.getElementById("newsLink").value, // تم تفعيل حفظ الرابط
+            image: document.getElementById("pre-img").src,
+            timestamp: new Date().toLocaleString('ar-SA')
+        };
+        const blob = new Blob([JSON.stringify(entry, null, 2)], { type: "application/json" });
+        const a = document.createElement("a");
+        a.href = URL.createObjectURL(blob);
+        a.download = `خبر_${entry.serial}.json`;
+        a.click();
+    }
+
+    function autoShrink(element) {
+        let size = 13;
+        element.style.fontSize = size + "pt";
+        while (element.scrollHeight > element.offsetHeight && size > 7) {
+            size -= 0.5;
+            element.style.fontSize = size + "pt";
+        }
+    }
+</script>
+</body>
+</html>
